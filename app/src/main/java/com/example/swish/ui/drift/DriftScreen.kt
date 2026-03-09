@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,23 +20,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.rememberAsyncImagePainter
 import com.example.swish.data.model.User
+import com.example.swish.ui.SwishViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DriftScreen() {
+fun DriftScreen(viewModel: SwishViewModel) {
     var searchQuery by remember { mutableStateOf("") }
-    var searchResults by remember { mutableStateOf<List<User>>(emptyList()) }
+    val currentUser = viewModel.currentUser.value
     
-    // Mock search results
-    LaunchedEffect(searchQuery) {
-        if (searchQuery.isNotEmpty()) {
-            searchResults = listOf(
-                User(id = "1", name = "Swift User", username = "swiftie", status = "Floating through the drift"),
-                User(id = "2", name = "Swish Master", username = "swisher", status = "Catch the wave")
-            )
-        } else {
-            searchResults = emptyList()
+    val searchResults = if (searchQuery.isNotEmpty()) {
+        viewModel.allUsers.filter { 
+            it.name.contains(searchQuery, ignoreCase = true) || 
+            it.username.contains(searchQuery, ignoreCase = true)
         }
+    } else {
+        viewModel.allUsers.filter { it.id != currentUser.id }
     }
 
     Scaffold(
@@ -57,15 +56,13 @@ fun DriftScreen() {
                 shape = RoundedCornerShape(24.dp)
             )
 
-            if (searchQuery.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Discover what's drifting in Swish", color = Color.Gray)
-                }
-            } else {
-                LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    items(searchResults) { user ->
-                        UserSearchItem(user)
-                    }
+            LazyColumn(modifier = Modifier.fillMaxSize()) {
+                items(searchResults) { user ->
+                    UserSearchItem(
+                        user = user,
+                        isFollowing = currentUser.following.contains(user.id),
+                        onFollowClick = { viewModel.followUser(user.id) }
+                    )
                 }
             }
         }
@@ -73,7 +70,11 @@ fun DriftScreen() {
 }
 
 @Composable
-fun UserSearchItem(user: User) {
+fun UserSearchItem(
+    user: User,
+    isFollowing: Boolean,
+    onFollowClick: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -84,7 +85,7 @@ fun UserSearchItem(user: User) {
             modifier = Modifier
                 .size(50.dp)
                 .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primaryContainer)
+                .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {
             if (user.photoUrl.isNotEmpty()) {
                 Image(
@@ -92,6 +93,13 @@ fun UserSearchItem(user: User) {
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                Icon(
+                    Icons.Default.Person,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize().padding(10.dp),
+                    tint = Color.Gray
                 )
             }
         }
@@ -104,10 +112,14 @@ fun UserSearchItem(user: User) {
         }
         
         Button(
-            onClick = { /* Follow */ },
-            shape = RoundedCornerShape(12.dp)
+            onClick = onFollowClick,
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (isFollowing) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.primary,
+                contentColor = if (isFollowing) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onPrimary
+            )
         ) {
-            Text("Follow")
+            Text(if (isFollowing) "Following" else "Follow")
         }
     }
 }

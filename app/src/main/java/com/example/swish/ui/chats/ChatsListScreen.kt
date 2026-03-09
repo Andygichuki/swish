@@ -21,125 +21,32 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.rememberAsyncImagePainter
-// import com.google.firebase.Timestamp
-// import com.google.firebase.auth.ktx.auth
-// import com.google.firebase.firestore.ktx.firestore
-// import com.google.firebase.ktx.Firebase
 import com.example.swish.data.model.Chat
 import com.example.swish.data.model.User
 import com.example.swish.data.model.Story
+import com.example.swish.ui.SwishViewModel
 import java.text.SimpleDateFormat
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatsListScreen(
+    viewModel: SwishViewModel,
     onChatClick: (String, String) -> Unit,
     onProfileClick: () -> Unit,
     onNewChatClick: () -> Unit
 ) {
-    // val db = Firebase.firestore
-    // val currentUserId = Firebase.auth.currentUser?.uid ?: ""
-    val currentUserId = "mock_user_id"
-    
-    var chats by remember { mutableStateOf<List<Pair<Chat, User>>>(emptyList()) }
+    val currentUser = viewModel.currentUser.value
     var searchQuery by remember { mutableStateOf("") }
-    var stories by remember { mutableStateOf<List<Story>>(emptyList()) }
     
-    // Fetch chats (Mocked)
-    LaunchedEffect(Unit) {
-        val mockUser = User(id = "other_user", name = "John Doe", isOnline = true)
-        val mockChat = Chat(
-            id = "chat_1",
-            participants = listOf(currentUserId, "other_user"),
-            lastMessage = "Hello there!",
-            // lastMessageTimestamp = Timestamp.now()
-        )
-        chats = listOf(Pair(mockChat, mockUser))
-    }
-    
-    /*
-    // Fetch chats in real-time
-    DisposableEffect(Unit) {
-        val listener = db.collection("chats")
-            .whereArrayContains("participants", currentUserId)
-            .addSnapshotListener { snapshot, error ->
-                if (error != null) return@addSnapshotListener
-                
-                snapshot?.documents?.let { docs ->
-                    val chatList = mutableListOf<Pair<Chat, User>>()
-                    var loadedCount = 0
-                    if (docs.isEmpty()) {
-                        chats = emptyList()
-                    }
-                    docs.forEach { doc ->
-                        val chat = Chat(
-                            id = doc.id,
-                            participants = doc.get("participants") as? List<String> ?: emptyList(),
-                            lastMessage = doc.getString("lastMessage") ?: "",
-                            lastMessageTimestamp = doc.getTimestamp("lastMessageTimestamp") ?: Timestamp.now(),
-                            unreadCount = doc.get("unreadCount") as? Map<String, Int> ?: emptyMap(),
-                            lastMessageSenderId = doc.getString("lastMessageSenderId") ?: ""
-                        )
-                        
-                        val otherUserId = chat.participants.find { it != currentUserId }
-                        if (otherUserId != null) {
-                            db.collection("users").document(otherUserId).get()
-                                .addOnSuccessListener { userDoc ->
-                                    val user = User(
-                                        id = userDoc.id,
-                                        name = userDoc.getString("name") ?: "",
-                                        photoUrl = userDoc.getString("photoUrl") ?: "",
-                                        isOnline = userDoc.getBoolean("isOnline") ?: false
-                                    )
-                                    chatList.add(Pair(chat, user))
-                                    loadedCount++
-                                    if (loadedCount == docs.size) {
-                                        chats = chatList.sortedByDescending { it.first.lastMessageTimestamp }
-                                    }
-                                }
-                        } else {
-                            loadedCount++
-                            if (loadedCount == docs.size) {
-                                chats = chatList.sortedByDescending { it.first.lastMessageTimestamp }
-                            }
-                        }
-                    }
-                }
-            }
-        
-        onDispose {
-            listener.remove()
-        }
-    }
-    */
-    
-    /*
-    // Fetch stories
-    LaunchedEffect(Unit) {
-        db.collection("stories")
-            .whereGreaterThan("expiresAt", Timestamp.now())
-            .addSnapshotListener { snapshot, error ->
-                if (error != null) return@addSnapshotListener
-                
-                stories = snapshot?.documents?.map { doc ->
-                    Story(
-                        id = doc.id,
-                        userId = doc.getString("userId") ?: "",
-                        mediaUrl = doc.getString("mediaUrl") ?: "",
-                        timestamp = doc.getTimestamp("timestamp") ?: Timestamp.now(),
-                        viewers = doc.get("viewers") as? List<String> ?: emptyList()
-                    )
-                }?.filter { !it.viewers.contains(currentUserId) } ?: emptyList()
-            }
-    }
-    */
+    // In a real app, stories would come from viewModel
+    val stories = remember { emptyList<Story>() }
     
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
-                    Text("Chats", style = MaterialTheme.typography.titleLarge)
+                    Text("Swish", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 },
                 actions = {
                     IconButton(onClick = onProfileClick) {
@@ -148,10 +55,7 @@ fun ChatsListScreen(
                     IconButton(onClick = { /* Settings */ }) {
                         Icon(Icons.Default.Settings, contentDescription = "Settings")
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
+                }
             )
         },
         floatingActionButton = {
@@ -180,11 +84,7 @@ fun ChatsListScreen(
                 leadingIcon = {
                     Icon(Icons.Default.Search, contentDescription = null)
                 },
-                shape = RoundedCornerShape(24.dp),
-                colors = TextFieldDefaults.outlinedTextFieldColors(
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
-                )
+                shape = RoundedCornerShape(24.dp)
             )
             
             // Stories row
@@ -196,15 +96,18 @@ fun ChatsListScreen(
             LazyColumn(
                 modifier = Modifier.fillMaxSize()
             ) {
-                items(chats) { (chat, user) ->
+                items(viewModel.chats) { chat ->
+                    val otherUserId = chat.participants.find { it != currentUser.id }
+                    val otherUser = viewModel.allUsers.find { it.id == otherUserId } ?: User(name = "Unknown")
+                    
                     if (searchQuery.isEmpty() || 
-                        user.name.contains(searchQuery, ignoreCase = true)) {
+                        otherUser.name.contains(searchQuery, ignoreCase = true)) {
                         ChatItem(
                             chat = chat,
-                            user = user,
-                            currentUserId = currentUserId,
+                            user = otherUser,
+                            currentUserId = currentUser.id,
                             onClick = {
-                                onChatClick(chat.id, user.id)
+                                onChatClick(chat.id, otherUser.id)
                             }
                         )
                     }
@@ -222,7 +125,6 @@ fun ChatItem(
     onClick: () -> Unit
 ) {
     val unreadCount = chat.unreadCount[currentUserId] ?: 0
-    val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
     
     Card(
         modifier = Modifier
@@ -254,6 +156,13 @@ fun ChatItem(
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Icon(
+                        Icons.Default.Person,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize().padding(12.dp),
+                        tint = Color.Gray
                     )
                 }
                 
@@ -290,7 +199,7 @@ fun ChatItem(
                     )
                     
                     Text(
-                        text = "10:00", // formatter.format(chat.lastMessageTimestamp.toDate()),
+                        text = "Now",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                         fontSize = 12.sp

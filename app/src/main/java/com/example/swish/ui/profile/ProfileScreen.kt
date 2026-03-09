@@ -5,12 +5,12 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.outlined.GridOn
 import androidx.compose.material.icons.outlined.VideoLibrary
 import androidx.compose.material.icons.outlined.PersonPin
@@ -27,31 +27,22 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.rememberAsyncImagePainter
 import com.example.swish.data.model.User
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
+    user: User,
     onBackPressed: () -> Unit,
     onLogout: () -> Unit
 ) {
-    var user by remember { mutableStateOf<User?>(null) }
     var selectedTab by remember { mutableIntStateOf(0) }
-    
     var showFollowersList by remember { mutableStateOf(false) }
     var showFollowingList by remember { mutableStateOf(false) }
     
-    // Fetch user data (Mocked)
-    LaunchedEffect(Unit) {
-        user = User(
-            id = "mock_id",
-            name = "Test User",
-            username = "testuser",
-            photoUrl = "",
-            status = "Hey there! I'm using Swish. 🌊 Catching the drift.",
-            followers = listOf("user1", "user2", "user3", "user4", "user5"),
-            following = listOf("user4", "user5", "user6")
-        )
-    }
+    val sheetState = rememberModalBottomSheetState()
+    val scope = rememberCoroutineScope()
+    var showBottomSheet by remember { mutableStateOf(false) }
     
     Scaffold(
         topBar = {
@@ -59,7 +50,7 @@ fun ProfileScreen(
                 title = { 
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = user?.username ?: "Profile",
+                            text = user.username,
                             fontWeight = FontWeight.Bold,
                             fontSize = 22.sp
                         )
@@ -74,140 +65,170 @@ fun ProfileScreen(
                     IconButton(onClick = { /* New Post */ }) {
                         Icon(Icons.Default.AddBox, contentDescription = "New Post")
                     }
-                    IconButton(onClick = { /* Menu */ }) {
-                        Icon(Icons.Default.Menu, contentDescription = "Menu")
+                    IconButton(onClick = { showBottomSheet = true }) {
+                        Icon(Icons.Default.Menu, contentDescription = "Settings and activity")
                     }
                 }
             )
         }
     ) { paddingValues ->
-        if (user == null) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
-        } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-            ) {
-                // Profile Header
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            // Profile Header
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    // Profile Picture
+                    Box(
+                        modifier = Modifier
+                            .size(86.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .border(1.dp, Color.LightGray, CircleShape)
                     ) {
-                        // Profile Picture
-                        Box(
-                            modifier = Modifier
-                                .size(86.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.surfaceVariant)
-                                .border(1.dp, Color.LightGray, CircleShape)
-                        ) {
-                            if (user!!.photoUrl.isNotEmpty()) {
-                                Image(
-                                    painter = rememberAsyncImagePainter(user!!.photoUrl),
-                                    contentDescription = null,
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop
-                                )
-                            } else {
-                                Icon(
-                                    Icons.Default.Person,
-                                    contentDescription = null,
-                                    modifier = Modifier.fillMaxSize().padding(16.dp),
-                                    tint = Color.Gray
-                                )
-                            }
-                        }
-
-                        // Stats
-                        Row(
-                            modifier = Modifier.weight(1f),
-                            horizontalArrangement = Arrangement.SpaceEvenly
-                        ) {
-                            ProfileStatItem("Posts", 12, {})
-                            ProfileStatItem("Followers", user!!.followers.size, { showFollowersList = true })
-                            ProfileStatItem("Following", user!!.following.size, { showFollowingList = true })
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Bio
-                    Text(text = user!!.name, fontWeight = FontWeight.Bold)
-                    Text(text = user!!.status, fontSize = 14.sp)
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Actions
-                    Row(modifier = Modifier.fillMaxWidth()) {
-                        Button(
-                            onClick = { /* Edit Profile */ },
-                            modifier = Modifier.weight(1f).height(36.dp),
-                            shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                            ),
-                            contentPadding = PaddingValues(0.dp)
-                        ) {
-                            Text("Edit Profile", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Button(
-                            onClick = { /* Share Profile */ },
-                            modifier = Modifier.weight(1f).height(36.dp),
-                            shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                            ),
-                            contentPadding = PaddingValues(0.dp)
-                        ) {
-                            Text("Share Profile", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                        }
-                    }
-                }
-
-                // Tabs
-                TabRow(
-                    selectedTabIndex = selectedTab,
-                    containerColor = Color.Transparent,
-                    contentColor = MaterialTheme.colorScheme.primary,
-                    divider = { HorizontalDivider(thickness = 0.5.dp, color = Color.LightGray) }
-                ) {
-                    ProfileTab(Icons.Outlined.GridOn, selectedTab == 0) { selectedTab = 0 }
-                    ProfileTab(Icons.Outlined.VideoLibrary, selectedTab == 1) { selectedTab = 1 }
-                    ProfileTab(Icons.Outlined.PersonPin, selectedTab == 2) { selectedTab = 2 }
-                }
-
-                // Grid of Posts
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(3),
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(1.dp),
-                    horizontalArrangement = Arrangement.spacedBy(1.dp),
-                    verticalArrangement = Arrangement.spacedBy(1.dp)
-                ) {
-                    items(21) { index ->
-                        Box(
-                            modifier = Modifier
-                                .aspectRatio(1f)
-                                .background(Color.LightGray.copy(alpha = 0.3f))
-                        ) {
-                            // Placeholder for post image
-                            Icon(
-                                Icons.Default.Image,
+                        if (user.photoUrl.isNotEmpty()) {
+                            Image(
+                                painter = rememberAsyncImagePainter(user.photoUrl),
                                 contentDescription = null,
-                                modifier = Modifier.align(Alignment.Center).size(24.dp),
-                                tint = Color.Gray.copy(alpha = 0.5f)
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Icon(
+                                Icons.Default.Person,
+                                contentDescription = null,
+                                modifier = Modifier.fillMaxSize().padding(16.dp),
+                                tint = Color.Gray
                             )
                         }
                     }
+
+                    // Stats
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        ProfileStatItem("Posts", 12, {})
+                        ProfileStatItem("Followers", user.followers.size, { showFollowersList = true })
+                        ProfileStatItem("Following", user.following.size, { showFollowingList = true })
+                    }
                 }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Bio
+                Text(text = user.name, fontWeight = FontWeight.Bold)
+                Text(text = user.status, fontSize = 14.sp)
+                
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Actions
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    Button(
+                        onClick = { /* Edit Profile */ },
+                        modifier = Modifier.weight(1f).height(36.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        ),
+                        contentPadding = PaddingValues(0.dp)
+                    ) {
+                        Text("Edit Profile", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(
+                        onClick = { /* Share Profile */ },
+                        modifier = Modifier.weight(1f).height(36.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        ),
+                        contentPadding = PaddingValues(0.dp)
+                    ) {
+                        Text("Share Profile", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
+
+            // Tabs
+            TabRow(
+                selectedTabIndex = selectedTab,
+                containerColor = Color.Transparent,
+                contentColor = MaterialTheme.colorScheme.primary,
+                divider = { HorizontalDivider(thickness = 0.5.dp, color = Color.LightGray) }
+            ) {
+                ProfileTab(Icons.Outlined.GridOn, selectedTab == 0) { selectedTab = 0 }
+                ProfileTab(Icons.Outlined.VideoLibrary, selectedTab == 1) { selectedTab = 1 }
+                ProfileTab(Icons.Outlined.PersonPin, selectedTab == 2) { selectedTab = 2 }
+            }
+
+            // Grid of Posts
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(3),
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(1.dp),
+                horizontalArrangement = Arrangement.spacedBy(1.dp),
+                verticalArrangement = Arrangement.spacedBy(1.dp)
+            ) {
+                items(21) { index ->
+                    Box(
+                        modifier = Modifier
+                            .aspectRatio(1f)
+                            .background(Color.LightGray.copy(alpha = 0.3f))
+                    ) {
+                        Icon(
+                            Icons.Default.Image,
+                            contentDescription = null,
+                            modifier = Modifier.align(Alignment.Center).size(24.dp),
+                            tint = Color.Gray.copy(alpha = 0.5f)
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    if (showBottomSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showBottomSheet = false },
+            sheetState = sheetState
+        ) {
+            // Sheet content
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 32.dp)
+            ) {
+                BottomSheetOption(Icons.Default.Settings, "Settings and privacy")
+                BottomSheetOption(Icons.Default.History, "Archive")
+                BottomSheetOption(Icons.Default.QrCodeScanner, "QR code")
+                BottomSheetOption(Icons.Default.BookmarkBorder, "Saved")
+                BottomSheetOption(Icons.Default.Group, "Close Friends")
+                BottomSheetOption(Icons.Default.StarBorder, "Favorites")
+                
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                
+                BottomSheetOption(
+                    icon = Icons.AutoMirrored.Filled.Logout,
+                    title = "Log out",
+                    color = Color.Red,
+                    onClick = {
+                        scope.launch { sheetState.hide() }.invokeOnCompletion {
+                            if (!sheetState.isVisible) {
+                                showBottomSheet = false
+                                onLogout()
+                            }
+                        }
+                    }
+                )
             }
         }
     }
@@ -215,7 +236,7 @@ fun ProfileScreen(
     if (showFollowersList) {
         UserListDialog(
             title = "Followers",
-            userIds = user?.followers ?: emptyList(),
+            userIds = user.followers,
             onDismiss = { showFollowersList = false }
         )
     }
@@ -223,9 +244,29 @@ fun ProfileScreen(
     if (showFollowingList) {
         UserListDialog(
             title = "Following",
-            userIds = user?.following ?: emptyList(),
+            userIds = user.following,
             onDismiss = { showFollowingList = false }
         )
+    }
+}
+
+@Composable
+fun BottomSheetOption(
+    icon: ImageVector,
+    title: String,
+    color: Color = MaterialTheme.colorScheme.onSurface,
+    onClick: () -> Unit = {}
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(icon, contentDescription = null, tint = color)
+        Spacer(modifier = Modifier.width(16.dp))
+        Text(text = title, style = MaterialTheme.typography.bodyLarge, color = color)
     }
 }
 

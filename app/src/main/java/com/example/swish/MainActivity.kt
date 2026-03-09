@@ -13,6 +13,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.swish.ui.MainContainer
+import com.example.swish.ui.SwishViewModel
 import com.example.swish.ui.auth.LoginScreen
 import com.example.swish.ui.auth.SignUpScreen
 import com.example.swish.ui.chat.ChatScreen
@@ -24,6 +25,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             val themeViewModel: ThemeViewModel = viewModel()
+            val swishViewModel: SwishViewModel = viewModel()
+            
             MessengerTheme(
                 darkTheme = themeViewModel.isDarkTheme.value
             ) {
@@ -31,7 +34,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    SwishApp()
+                    SwishApp(swishViewModel)
                 }
             }
         }
@@ -39,7 +42,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun SwishApp() {
+fun SwishApp(viewModel: SwishViewModel) {
     val navController = rememberNavController()
     var isAuthenticated by remember { mutableStateOf(false) }
     
@@ -77,6 +80,7 @@ fun SwishApp() {
         
         composable("main") {
             MainContainer(
+                viewModel = viewModel,
                 onLogout = {
                     isAuthenticated = false
                     navController.navigate("login") {

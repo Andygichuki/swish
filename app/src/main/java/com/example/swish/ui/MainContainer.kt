@@ -33,6 +33,7 @@ sealed class Screen(val route: String, val title: String, val selectedIcon: Imag
 
 @Composable
 fun MainContainer(
+    viewModel: SwishViewModel,
     onLogout: () -> Unit,
     onChatClick: (String, String) -> Unit
 ) {
@@ -78,17 +79,18 @@ fun MainContainer(
         NavHost(navController, startDestination = Screen.Swish.route, Modifier.padding(innerPadding)) {
             composable(Screen.Swish.route) {
                 ChatsListScreen(
+                    viewModel = viewModel,
                     onChatClick = onChatClick,
                     onProfileClick = { navController.navigate(Screen.Vault.route) },
                     onNewChatClick = { navController.navigate(Screen.Swift.route) }
                 )
             }
             composable(Screen.Drift.route) {
-                DriftScreen()
+                DriftScreen(viewModel = viewModel)
             }
             composable(Screen.Swift.route) {
                 SwiftScreen(
-                    onNewPost = { /* TODO */ },
+                    onNewPost = { /* Implementation of post creation could go here */ },
                     onNewChat = { navController.navigate(Screen.Swish.route) },
                     onNewStory = { /* TODO */ }
                 )
@@ -98,6 +100,7 @@ fun MainContainer(
             }
             composable(Screen.Vault.route) {
                 ProfileScreen(
+                    user = viewModel.currentUser.value,
                     onBackPressed = { navController.popBackStack() },
                     onLogout = onLogout
                 )
