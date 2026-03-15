@@ -35,7 +35,8 @@ sealed class Screen(val route: String, val title: String, val selectedIcon: Imag
 fun MainContainer(
     viewModel: SwishViewModel,
     onLogout: () -> Unit,
-    onChatClick: (String, String) -> Unit
+    onChatClick: (String, String) -> Unit,
+    onSettingsClick: () -> Unit
 ) {
     val navController = rememberNavController()
     val items = listOf(
@@ -90,7 +91,7 @@ fun MainContainer(
             }
             composable(Screen.Swift.route) {
                 SwiftScreen(
-                    onNewPost = { /* Implementation of post creation could go here */ },
+                    onNewPost = { /* TODO */ },
                     onNewChat = { navController.navigate(Screen.Swish.route) },
                     onNewStory = { /* TODO */ }
                 )
@@ -102,7 +103,8 @@ fun MainContainer(
                 ProfileScreen(
                     user = viewModel.currentUser.value,
                     onBackPressed = { navController.popBackStack() },
-                    onLogout = onLogout
+                    onLogout = onLogout,
+                    onSettingsClick = onSettingsClick
                 )
             }
         }

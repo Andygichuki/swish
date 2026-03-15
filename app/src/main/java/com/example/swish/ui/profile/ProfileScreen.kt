@@ -34,7 +34,8 @@ import kotlinx.coroutines.launch
 fun ProfileScreen(
     user: User,
     onBackPressed: () -> Unit,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onSettingsClick: () -> Unit
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
     var showFollowersList by remember { mutableStateOf(false) }
@@ -207,7 +208,14 @@ fun ProfileScreen(
                     .fillMaxWidth()
                     .padding(bottom = 32.dp)
             ) {
-                BottomSheetOption(Icons.Default.Settings, "Settings and privacy")
+                BottomSheetOption(Icons.Default.Settings, "Settings and privacy") {
+                    scope.launch { sheetState.hide() }.invokeOnCompletion {
+                        if (!sheetState.isVisible) {
+                            showBottomSheet = false
+                            onSettingsClick()
+                        }
+                    }
+                }
                 BottomSheetOption(Icons.Default.History, "Archive")
                 BottomSheetOption(Icons.Default.QrCodeScanner, "QR code")
                 BottomSheetOption(Icons.Default.BookmarkBorder, "Saved")

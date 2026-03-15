@@ -9,14 +9,18 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.swish.ui.MainContainer
 import com.example.swish.ui.SwishViewModel
 import com.example.swish.ui.auth.LoginScreen
 import com.example.swish.ui.auth.SignUpScreen
 import com.example.swish.ui.chat.ChatScreen
+import com.example.swish.ui.settings.SettingsScreen
+import com.example.swish.ui.settings.SettingsDetailScreen
 import com.example.swish.ui.theme.MessengerTheme
 import com.example.swish.ui.theme.ThemeViewModel
 
@@ -89,7 +93,36 @@ fun SwishApp(viewModel: SwishViewModel) {
                 },
                 onChatClick = { chatId, userId ->
                     navController.navigate("chat/$chatId/$userId")
+                },
+                onSettingsClick = {
+                    navController.navigate("settings")
                 }
+            )
+        }
+        
+        composable("settings") {
+            SettingsScreen(
+                onBackPressed = { navController.popBackStack() },
+                onLogout = {
+                    isAuthenticated = false
+                    navController.navigate("login") {
+                        popUpTo("main") { inclusive = true }
+                    }
+                },
+                onNavigateToDetail = { detailTitle ->
+                    navController.navigate("settings_detail/$detailTitle")
+                }
+            )
+        }
+
+        composable(
+            route = "settings_detail/{title}",
+            arguments = listOf(navArgument("title") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val title = backStackEntry.arguments?.getString("title") ?: ""
+            SettingsDetailScreen(
+                title = title,
+                onBackPressed = { navController.popBackStack() }
             )
         }
         
